@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useFEAStore } from '../store/fea';
+import {
+  NOT_COMPUTED,
+  formatStressMPa,
+  formatStrainPercent,
+  formatForceKN,
+} from '../utils/format';
 
 const store = useFEAStore();
 
@@ -8,6 +14,17 @@ const selectedEl = computed(() => {
   if (store.selectedElement === null) return null;
   return store.model.elements.find((e) => e.id === store.selectedElement) || null;
 });
+
+// 选中单元的计算结果：与图例、侧栏一样取自同一次 store.result；
+// 未计算时为 null，界面统一显示占位而不是 0
+const elResult = computed(() => {
+  if (store.selectedElement === null) return null;
+  return store.elementResults.get(store.selectedElement) || null;
+});
+
+const stressText = computed(() => formatStressMPa(elResult.value?.stress));
+const strainText = computed(() => formatStrainPercent(elResult.value?.strain));
+const forceText = computed(() => formatForceKN(elResult.value?.force));
 
 const node1 = computed(() => {
   if (!selectedEl.value) return null;
@@ -84,27 +101,37 @@ const color = computed(() => {
       </div>
 
       <div class="border-t border-slate-700 pt-2 mt-2">
-        <div class="text-slate-400 mb-1">计算结果</div>
+        <div class="text-slate-400 mb-1">
+          计算结果
+          <span v-if="!elResult" class="text-slate-500">（{{ NOT_COMPUTED }}，请先求解）</span>
+        </div>
         <div class="grid grid-cols-3 gap-2">
           <div class="bg-slate-900 rounded p-2">
             <div class="text-slate-500 text-[10px]">应力</div>
-            <div class="text-sm font-bold" :style="{ color }">
-              {{ (selectedEl.stress / 1e6).toFixed(2) }}
-              <span class="text-[10px] text-slate-500">MPa</span>
+            <div
+              class="font-bold"
+              :style="elResult ? { color } : undefined"
+              :class="elResult ? 'text-sm' : 'text-slate-500 text-xs'"
+            >
+              {{ stressText }}
             </div>
           </div>
           <div class="bg-slate-900 rounded p-2">
             <div class="text-slate-500 text-[10px]">应变</div>
-            <div class="text-sm font-bold text-sky-400">
-              {{ (selectedEl.strain * 100).toFixed(4) }}
-              <span class="text-[10px] text-slate-500">%</span>
+            <div
+              class="font-bold"
+              :class="elResult ? 'text-sm text-sky-400' : 'text-slate-500 text-xs'"
+            >
+              {{ strainText }}
             </div>
           </div>
           <div class="bg-slate-900 rounded p-2">
             <div class="text-slate-500 text-[10px]">轴力</div>
-            <div class="text-sm font-bold text-amber-400">
-              {{ (selectedEl.force / 1000).toFixed(2) }}
-              <span class="text-[10px] text-slate-500">kN</span>
+            <div
+              class="font-bold"
+              :class="elResult ? 'text-sm text-amber-400' : 'text-slate-500 text-xs'"
+            >
+              {{ forceText }}
             </div>
           </div>
         </div>

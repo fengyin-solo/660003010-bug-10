@@ -3,7 +3,9 @@ import { onMounted } from 'vue';
 import FEACanvas from './components/FEACanvas.vue';
 import ElementInfo from './components/ElementInfo.vue';
 import MeshControls from './components/MeshControls.vue';
+import ResultReadout from './components/ResultReadout.vue';
 import { useFEAStore } from './store/fea';
+import { formatStressMPa, formatDisplacementMM } from './utils/format';
 
 const store = useFEAStore();
 
@@ -41,18 +43,18 @@ onMounted(() => {
 
     <!-- Bottom status bar -->
     <footer class="bg-slate-900 border-t border-slate-800 px-6 py-2 flex items-center gap-6 text-xs text-slate-400">
-      <span>
-        最大应力:
-        <span class="text-red-400 font-bold">
-          {{ store.result ? (store.maxStress / 1e6).toFixed(2) + ' MPa' : '—' }}
-        </span>
-      </span>
-      <span>
-        最大位移:
-        <span class="text-amber-400 font-bold">
-          {{ store.result ? (store.maxDisplacement * 1000).toFixed(3) + ' mm' : '—' }}
-        </span>
-      </span>
+      <ResultReadout
+        label="最大应力"
+        :value="formatStressMPa(store.maxStress)"
+        :pending="!store.hasResult"
+        value-class="text-red-400"
+      />
+      <ResultReadout
+        label="最大位移"
+        :value="formatDisplacementMM(store.maxDisplacement)"
+        :pending="!store.hasResult"
+        value-class="text-amber-400"
+      />
       <span>
         节点数: <span class="text-slate-200">{{ store.model.nodes.length }}</span>
       </span>

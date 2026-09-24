@@ -144,6 +144,7 @@ export function solve(model: FEAModel): FEAResult {
     displacements: U,
     stresses,
     strains,
+    forces,
     maxDisplacement,
     maxStress,
     reactionForces,

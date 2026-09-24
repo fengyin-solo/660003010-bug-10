@@ -64,14 +64,42 @@ export const useFEAStore = defineStore('fea', () => {
   }
 
   // ─── Computed ─────────────────────────────────────────────────────────────
+  // 所有读数都以 result 为唯一数据源；未计算时一律为 null，由 UI 统一显示占位
+  const hasResult = computed(() => result.value !== null);
+
   const maxStress = computed(() => {
-    if (!result.value) return 0;
+    if (!result.value) return null;
     return result.value.maxStress;
   });
 
   const maxDisplacement = computed(() => {
-    if (!result.value) return 0;
+    if (!result.value) return null;
     return result.value.maxDisplacement;
+  });
+
+  // 每个单元的计算结果（应力/应变/轴力），与 result 的数组按单元顺序一一对应
+  const elementResults = computed(() => {
+    const map = new Map<number, { stress: number; strain: number; force: number }>();
+    if (!result.value) return map;
+    model.value.elements.forEach((el, i) => {
+      map.set(el.id, {
+        stress: result.value!.stresses[i],
+        strain: result.value!.strains[i],
+        force: result.value!.forces[i],
+      });
+    });
+    return map;
+  });
+
+  // 各热力图模式的峰值（取绝对值），图例与着色共用同一份
+  const modeMaxes = computed(() => {
+    if (!result.value) return null;
+    const absMax = (arr: number[]) => Math.max(...arr.map(Math.abs));
+    return {
+      stress: absMax(result.value.stresses),
+      strain: absMax(result.value.strains),
+      force: absMax(result.value.forces),
+    };
   });
 
   const elementColors = computed(() => {
@@ -92,7 +120,7 @@ export const useFEAStore = defineStore('fea', () => {
         values = result.value.strains.map(Math.abs);
         break;
       case 'force':
-        values = model.value.elements.map((e) => Math.abs(e.force));
+        values = result.value.forces.map(Math.abs);
         break;
       default:
         values = result.value.stresses.map(Math.abs);
@@ -118,8 +146,11 @@ export const useFEAStore = defineStore('fea', () => {
     deformationScale,
     selectedElement,
     heatmapMode,
+    hasResult,
     maxStress,
     maxDisplacement,
+    elementResults,
+    modeMaxes,
     elementColors,
     loadPreset,
     solve,

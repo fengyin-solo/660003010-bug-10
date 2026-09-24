@@ -33,6 +33,7 @@ export interface FEAResult {
   displacements: number[];    // global displacement vector
   stresses: number[];          // per-element stress
   strains: number[];           // per-element strain
+  forces: number[];            // per-element axial force
   maxDisplacement: number;
   maxStress: number;
   reactionForces: { nodeId: number; fx: number; fy: number }[];

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick } from 'vue';
 import { useFEAStore } from '../store/fea';
+import { NOT_COMPUTED, formatLegendMax } from '../utils/format';
 
 const store = useFEAStore();
 const canvas = ref<HTMLCanvasElement>();
@@ -196,14 +197,19 @@ function draw() {
   const legendH = H - 60;
   const legendW = 15;
 
-  const gradient = ctx.createLinearGradient(0, legendY, 0, legendY + legendH);
-  gradient.addColorStop(0, 'rgb(255,0,0)');
-  gradient.addColorStop(0.25, 'rgb(255,255,0)');
-  gradient.addColorStop(0.5, 'rgb(0,255,0)');
-  gradient.addColorStop(0.75, 'rgb(0,255,255)');
-  gradient.addColorStop(1, 'rgb(0,0,128)');
-
-  ctx.fillStyle = gradient;
+  if (store.modeMaxes) {
+    // 有结果：jet 渐变 + 峰值刻度
+    const gradient = ctx.createLinearGradient(0, legendY, 0, legendY + legendH);
+    gradient.addColorStop(0, 'rgb(255,0,0)');
+    gradient.addColorStop(0.25, 'rgb(255,255,0)');
+    gradient.addColorStop(0.5, 'rgb(0,255,0)');
+    gradient.addColorStop(0.75, 'rgb(0,255,255)');
+    gradient.addColorStop(1, 'rgb(0,0,128)');
+    ctx.fillStyle = gradient;
+  } else {
+    // 未计算：灰条，不标注任何数值，避免把"还没算"误读成 0
+    ctx.fillStyle = '#334155';
+  }
   ctx.fillRect(legendX, legendY, legendW, legendH);
   ctx.strokeStyle = '#475569';
   ctx.lineWidth = 1;
@@ -212,29 +218,17 @@ function draw() {
   // Legend labels
   ctx.fillStyle = '#94a3b8';
   ctx.font = '10px sans-serif';
-  ctx.textAlign = 'left';
-
-  let maxVal = 0, minVal = 0;
-  if (store.result) {
-    switch (store.heatmapMode) {
-      case 'stress':
-        maxVal = Math.max(...store.result.stresses.map(Math.abs));
-        break;
-      case 'strain':
-        maxVal = Math.max(...store.result.strains.map(Math.abs));
-        break;
-      case 'force':
-        maxVal = Math.max(...elements.map((e) => Math.abs(e.force)));
-        break;
-    }
-  }
-
-  const unit = store.heatmapMode === 'stress' ? 'MPa' :
-    store.heatmapMode === 'strain' ? '%' : 'kN';
-
   ctx.textAlign = 'right';
-  ctx.fillText(`${maxVal.toExponential(1)} ${unit}`, legendX - 4, legendY + 8);
-  ctx.fillText('0', legendX - 4, legendY + legendH);
+
+  if (store.modeMaxes) {
+    const maxVal = store.modeMaxes[store.heatmapMode];
+    ctx.fillText(formatLegendMax(store.heatmapMode, maxVal), legendX - 4, legendY + 8);
+    ctx.fillText('0', legendX - 4, legendY + legendH);
+  } else {
+    // 与详情、侧栏一致的未计算占位
+    ctx.fillStyle = '#64748b';
+    ctx.fillText(NOT_COMPUTED, legendX - 4, legendY + legendH / 2);
+  }
 
   // Mode label
   ctx.save();
