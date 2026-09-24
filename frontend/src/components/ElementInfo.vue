@@ -1,12 +1,24 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useFEAStore } from '../store/fea';
+import {
+  PENDING_LABEL,
+  formatStress,
+  formatStrain,
+  formatForce,
+} from '../utils/format';
 
 const store = useFEAStore();
 
 const selectedEl = computed(() => {
   if (store.selectedElement === null) return null;
   return store.model.elements.find((e) => e.id === store.selectedElement) || null;
+});
+
+// 应力/应变/轴力只认本次求解结果；未求解时为 null，绝不显示初始 0
+const resultData = computed(() => {
+  if (!selectedEl.value) return null;
+  return store.getElementResult(selectedEl.value.id);
 });
 
 const node1 = computed(() => {
@@ -84,27 +96,34 @@ const color = computed(() => {
       </div>
 
       <div class="border-t border-slate-700 pt-2 mt-2">
-        <div class="text-slate-400 mb-1">计算结果</div>
+        <div class="flex items-center justify-between mb-1">
+          <div class="text-slate-400">计算结果</div>
+          <div v-if="!resultData" class="text-[10px] text-slate-500">
+            {{ PENDING_LABEL }}：点击「求解 FEA」后显示
+          </div>
+        </div>
         <div class="grid grid-cols-3 gap-2">
           <div class="bg-slate-900 rounded p-2">
             <div class="text-slate-500 text-[10px]">应力</div>
-            <div class="text-sm font-bold" :style="{ color }">
-              {{ (selectedEl.stress / 1e6).toFixed(2) }}
-              <span class="text-[10px] text-slate-500">MPa</span>
+            <div class="text-sm font-bold" :class="resultData ? '' : 'text-slate-600'">
+              <template v-if="resultData" :style="{ color }">
+                {{ formatStress(resultData.stress) }}
+              </template>
+              <template v-else>— MPa</template>
             </div>
           </div>
           <div class="bg-slate-900 rounded p-2">
             <div class="text-slate-500 text-[10px]">应变</div>
-            <div class="text-sm font-bold text-sky-400">
-              {{ (selectedEl.strain * 100).toFixed(4) }}
-              <span class="text-[10px] text-slate-500">%</span>
+            <div class="text-sm font-bold" :class="resultData ? 'text-sky-400' : 'text-slate-600'">
+              <template v-if="resultData">{{ formatStrain(resultData.strain) }}</template>
+              <template v-else>— %</template>
             </div>
           </div>
           <div class="bg-slate-900 rounded p-2">
             <div class="text-slate-500 text-[10px]">轴力</div>
-            <div class="text-sm font-bold text-amber-400">
-              {{ (selectedEl.force / 1000).toFixed(2) }}
-              <span class="text-[10px] text-slate-500">kN</span>
+            <div class="text-sm font-bold" :class="resultData ? 'text-amber-400' : 'text-slate-600'">
+              <template v-if="resultData">{{ formatForce(resultData.force) }}</template>
+              <template v-else>— kN</template>
             </div>
           </div>
         </div>

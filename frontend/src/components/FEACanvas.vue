@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick } from 'vue';
 import { useFEAStore } from '../store/fea';
+import { PENDING_LABEL, formatHeatmapValue } from '../utils/format';
 
 const store = useFEAStore();
 const canvas = ref<HTMLCanvasElement>();
@@ -196,6 +197,25 @@ function draw() {
   const legendH = H - 60;
   const legendW = 15;
 
+  // 未求解：灰色图例条，不标注任何数值
+  if (!store.result) {
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(legendX, legendY, legendW, legendH);
+    ctx.strokeStyle = '#475569';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(legendX, legendY, legendW, legendH);
+
+    ctx.save();
+    ctx.translate(legendX - 4, legendY + legendH / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#64748b';
+    ctx.font = '10px sans-serif';
+    ctx.fillText(PENDING_LABEL, 0, 0);
+    ctx.restore();
+    return;
+  }
+
   const gradient = ctx.createLinearGradient(0, legendY, 0, legendY + legendH);
   gradient.addColorStop(0, 'rgb(255,0,0)');
   gradient.addColorStop(0.25, 'rgb(255,255,0)');
@@ -209,31 +229,14 @@ function draw() {
   ctx.lineWidth = 1;
   ctx.strokeRect(legendX, legendY, legendW, legendH);
 
-  // Legend labels
+  // Legend labels：极值与热力图着色、详情面板取自同一次 result
   ctx.fillStyle = '#94a3b8';
   ctx.font = '10px sans-serif';
-  ctx.textAlign = 'left';
 
-  let maxVal = 0, minVal = 0;
-  if (store.result) {
-    switch (store.heatmapMode) {
-      case 'stress':
-        maxVal = Math.max(...store.result.stresses.map(Math.abs));
-        break;
-      case 'strain':
-        maxVal = Math.max(...store.result.strains.map(Math.abs));
-        break;
-      case 'force':
-        maxVal = Math.max(...elements.map((e) => Math.abs(e.force)));
-        break;
-    }
-  }
-
-  const unit = store.heatmapMode === 'stress' ? 'MPa' :
-    store.heatmapMode === 'strain' ? '%' : 'kN';
+  const maxLabel = formatHeatmapValue(store.heatmapMode, store.heatmapRange.max);
 
   ctx.textAlign = 'right';
-  ctx.fillText(`${maxVal.toExponential(1)} ${unit}`, legendX - 4, legendY + 8);
+  ctx.fillText(maxLabel, legendX - 4, legendY + 8);
   ctx.fillText('0', legendX - 4, legendY + legendH);
 
   // Mode label

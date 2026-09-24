@@ -31,8 +31,9 @@ export interface FEAModel {
 
 export interface FEAResult {
   displacements: number[];    // global displacement vector
-  stresses: number[];          // per-element stress
+  stresses: number[];          // per-element stress (Pa)
   strains: number[];           // per-element strain
+  forces: number[];            // per-element axial force (N)
   maxDisplacement: number;
   maxStress: number;
   reactionForces: { nodeId: number; fx: number; fy: number }[];

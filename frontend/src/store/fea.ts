@@ -74,6 +74,27 @@ export const useFEAStore = defineStore('fea', () => {
     return result.value.maxDisplacement;
   });
 
+  // 当前热力图模式对应的每单元读数（有结果时一律取自同一次 result）
+  const heatmapValues = computed<number[]>(() => {
+    if (!result.value) return [];
+    switch (heatmapMode.value) {
+      case 'stress':
+        return result.value.stresses.map(Math.abs);
+      case 'strain':
+        return result.value.strains.map(Math.abs);
+      case 'force':
+        return result.value.forces.map(Math.abs);
+      default:
+        return result.value.stresses.map(Math.abs);
+    }
+  });
+
+  const heatmapRange = computed(() => {
+    const values = heatmapValues.value;
+    if (values.length === 0) return { min: 0, max: 0 };
+    return { min: Math.min(...values), max: Math.max(...values) };
+  });
+
   const elementColors = computed(() => {
     const colors = new Map<number, string>();
     if (!result.value || model.value.elements.length === 0) {
@@ -83,32 +104,25 @@ export const useFEAStore = defineStore('fea', () => {
       return colors;
     }
 
-    let values: number[];
-    switch (heatmapMode.value) {
-      case 'stress':
-        values = result.value.stresses.map(Math.abs);
-        break;
-      case 'strain':
-        values = result.value.strains.map(Math.abs);
-        break;
-      case 'force':
-        values = model.value.elements.map((e) => Math.abs(e.force));
-        break;
-      default:
-        values = result.value.stresses.map(Math.abs);
-    }
+    const { min, max } = heatmapRange.value;
 
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-
-    for (let i = 0; i < model.value.elements.length; i++) {
-      colors.set(
-        model.value.elements[i].id,
-        jetColormap(values[i], min, max)
-      );
-    }
+    model.value.elements.forEach((el, i) => {
+      colors.set(el.id, jetColormap(heatmapValues.value[i], min, max));
+    });
     return colors;
   });
+
+  // 按单元 id 取本次求解的应力/应变/轴力；未求解时为 null
+  function getElementResult(elementId: number): { stress: number; strain: number; force: number } | null {
+    if (!result.value) return null;
+    const index = model.value.elements.findIndex((e) => e.id === elementId);
+    if (index < 0) return null;
+    return {
+      stress: result.value.stresses[index],
+      strain: result.value.strains[index],
+      force: result.value.forces[index],
+    };
+  }
 
   return {
     model,
@@ -121,6 +135,9 @@ export const useFEAStore = defineStore('fea', () => {
     maxStress,
     maxDisplacement,
     elementColors,
+    heatmapValues,
+    heatmapRange,
+    getElementResult,
     loadPreset,
     solve,
     toggleDeformed,

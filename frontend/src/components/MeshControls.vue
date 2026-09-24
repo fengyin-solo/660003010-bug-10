@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useFEAStore } from '../store/fea';
+import { PENDING_LABEL, formatStress, formatDisplacement } from '../utils/format';
 
 const store = useFEAStore();
 </script>
@@ -103,14 +104,14 @@ const store = useFEAStore();
       <div class="grid grid-cols-2 gap-2 text-xs">
         <div class="bg-slate-900 rounded p-2">
           <div class="text-slate-400">最大应力</div>
-          <div class="text-sm font-bold text-red-400">
-            {{ store.result ? (store.maxStress / 1e6).toFixed(2) + ' MPa' : '—' }}
+          <div :class="store.result ? 'text-sm font-bold text-red-400' : 'text-sm text-slate-600'">
+            {{ store.result ? formatStress(store.maxStress) : PENDING_LABEL }}
           </div>
         </div>
         <div class="bg-slate-900 rounded p-2">
           <div class="text-slate-400">最大位移</div>
-          <div class="text-sm font-bold text-amber-400">
-            {{ store.result ? (store.maxDisplacement * 1000).toFixed(3) + ' mm' : '—' }}
+          <div :class="store.result ? 'text-sm font-bold text-amber-400' : 'text-sm text-slate-600'">
+            {{ store.result ? formatDisplacement(store.maxDisplacement) : PENDING_LABEL }}
           </div>
         </div>
         <div class="bg-slate-900 rounded p-2">
